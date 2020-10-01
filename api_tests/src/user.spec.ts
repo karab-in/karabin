@@ -11,7 +11,7 @@ import {
 import {
   UserView,
   UserSettingsForm,
-} from 'lemmy-js-client';
+} from 'karabin-js-client';
 
 let auth: string;
 let apShortname: string;

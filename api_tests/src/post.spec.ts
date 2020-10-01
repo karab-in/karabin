@@ -23,7 +23,7 @@ import {
 } from './shared';
 import {
   Post,
-} from 'lemmy-js-client';
+} from 'karabin-js-client';
 
 beforeAll(async () => {
   await setupLogins();

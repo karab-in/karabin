@@ -24,9 +24,9 @@ import {
 } from './shared';
 import {
   Comment,
-} from 'lemmy-js-client';
+} from 'karabin-js-client';
 
-import { PostResponse } from 'lemmy-js-client';
+import { PostResponse } from 'karabin-js-client';
 
 let postRes: PostResponse;
 

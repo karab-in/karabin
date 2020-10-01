@@ -42,7 +42,7 @@ import {
   GetSiteResponse,
   SearchType,
   LemmyHttp,
-} from 'lemmy-js-client';
+} from 'karabin-js-client';
 
 export interface API {
   client: LemmyHttp;

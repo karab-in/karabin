@@ -2331,6 +2331,11 @@ jsprim@^1.2.2:
     json-schema "0.2.3"
     verror "1.10.0"
 
+karabin-js-client@^1.0.13:
+  version "1.0.12"
+  resolved "https://registry.yarnpkg.com/karabin-js-client/-/karabin-js-client-1.0.12.tgz#090af714af0a5cbff7a78b10ab860dc51fd147ea"
+  integrity sha512-HEDl311AJXu/3eKG126rvboIsOdEsnSLfSbd89d2zC+LGVcoJVJYAO5hSB7J6DJdFKNRqnETmCqD/r2aZ6RtUA==
+
 kind-of@^3.0.2, kind-of@^3.0.3, kind-of@^3.2.0:
   version "3.2.2"
   resolved "https://registry.yarnpkg.com/kind-of/-/kind-of-3.2.2.tgz#31ea21a734bab9bbb0f32466d893aea51e4a3c64"
@@ -2359,11 +2364,6 @@ kleur@^3.0.3:
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/kleur/-/kleur-3.0.3.tgz#a79c9ecc86ee1ce3fa6206d1216c501f147fc07e"
   integrity sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==
-
-lemmy-js-client@^1.0.13:
-  version "1.0.13"
-  resolved "https://registry.yarnpkg.com/lemmy-js-client/-/lemmy-js-client-1.0.13.tgz#d0e1246129ade295faeec1fb4b2c7397d6947a19"
-  integrity sha512-Xz87cCswi/2pbDdApw9JIy8bDWRFGiGWO6IhehTytOAzf36dr4GYgsjTQTLjBX+s+BNYr8hE0+Sz4g9c+ynoJg==
 
 leven@^3.1.0:
   version "3.1.0"

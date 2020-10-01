@@ -12,7 +12,7 @@ import {
 } from './shared';
 import {
   Community,
-} from 'lemmy-js-client';
+} from 'karabin-js-client';
 
 beforeAll(async () => {
   await setupLogins();
