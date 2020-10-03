@@ -12,10 +12,10 @@ services:
     restart: always
 
   lemmy:
-#    build:
+    build:
 #      context: ../../
 #      dockerfile: docker/prod/Dockerfile
-    image: orgkarabin/karabin:v0.7.61
+    image: orgkarabin/karabin:v0.7.61-kbin
     ports:
       - "127.0.0.1:8536:8536"
     restart: always
