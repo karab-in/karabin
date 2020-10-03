@@ -2,8 +2,8 @@
 set -e
 
 # Default configurations
-username=lemmy
-dbname=lemmy
+username=karabin
+dbname=karabin
 port=5432
 
 yes_no_prompt_invalid() {

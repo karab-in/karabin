@@ -4,9 +4,9 @@ services:
   postgres:
     image: postgres:12-alpine
     environment:
-      - POSTGRES_USER=lemmy
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=lemmy
+      - POSTGRES_USER=karabin
+      - POSTGRES_PASSWORD=karabin
+      - POSTGRES_DB=karabin
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data
     restart: always
