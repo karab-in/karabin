@@ -30,18 +30,21 @@ pub fn remove_slurs(test: &str) -> String {
   SLUR_REGEX.replace_all(test, "*removed*").to_string()
 }
 
-pub(crate) fn slur_check(test: &str) -> Result<(), Vec<&str>> {
-  let mut matches: Vec<&str> = SLUR_REGEX.find_iter(test).map(|mat| mat.as_str()).collect();
+pub(crate) fn slur_check(_test: &str) -> Result<(), Vec<&str>> {
+  // Temporary ignore slurs
+  Ok(())
 
-  // Unique
-  matches.sort_unstable();
-  matches.dedup();
-
-  if matches.is_empty() {
-    Ok(())
-  } else {
-    Err(matches)
-  }
+  // let mut matches: Vec<&str> = SLUR_REGEX.find_iter(test).map(|mat| mat.as_str()).collect();
+  //
+  // // Unique
+  // matches.sort_unstable();
+  // matches.dedup();
+  //
+  // if matches.is_empty() {
+  //   Ok(())
+  // } else {
+  //   Err(matches)
+  // }
 }
 
 pub fn check_slurs(text: &str) -> Result<(), APIError> {
