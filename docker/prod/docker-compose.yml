@@ -29,7 +29,7 @@ services:
       - iframely
 
   lemmy-ui:
-    image: dessalines/lemmy-ui:v0.0.14
+    image: orgkarabin/karabin-ui:v0.7.64-kbin
     ports:
       - "1235:1234"
     environment:
