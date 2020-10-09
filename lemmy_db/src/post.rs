@@ -100,7 +100,7 @@ impl Post {
   ) -> Result<Vec<Self>, Error> {
     use crate::schema::post::dsl::*;
 
-    let perma_deleted = "*Permananently Deleted*";
+    let perma_deleted = "*Usunięte permanentnie*";
     let perma_deleted_url = "https://deleted.com";
 
     diesel::update(post.filter(creator_id.eq(for_creator_id)))
