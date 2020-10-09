@@ -112,7 +112,10 @@ impl User_ {
   }
 
   pub fn read_from_name(conn: &PgConnection, from_user_name: &str) -> Result<Self, Error> {
-    user_.filter(name.eq(from_user_name)).first::<Self>(conn)
+    user_
+      .filter(local.eq(true))
+      .filter(name.eq(from_user_name))
+      .first::<Self>(conn)
   }
 
   pub fn add_admin(conn: &PgConnection, user_id: i32, added: bool) -> Result<Self, Error> {
@@ -144,11 +147,17 @@ impl User_ {
   }
 
   pub fn find_by_username(conn: &PgConnection, username: &str) -> Result<User_, Error> {
-    user_.filter(name.ilike(username)).first::<User_>(conn)
+    user_
+      .filter(local.eq(true))
+      .filter(name.ilike(username))
+      .first::<User_>(conn)
   }
 
   pub fn find_by_email(conn: &PgConnection, from_email: &str) -> Result<User_, Error> {
-    user_.filter(email.eq(from_email)).first::<User_>(conn)
+    user_
+      .filter(local.eq(true))
+      .filter(email.eq(from_email))
+      .first::<User_>(conn)
   }
 
   pub fn get_profile_url(&self, hostname: &str) -> String {
@@ -191,7 +200,7 @@ mod tests {
       published: None,
       updated: None,
       show_nsfw: false,
-      theme: "darkly".into(),
+      theme: "browser".into(),
       default_sort_type: SortType::Hot as i16,
       default_listing_type: ListingType::Subscribed as i16,
       lang: "browser".into(),
@@ -221,7 +230,7 @@ mod tests {
       published: inserted_user.published,
       updated: None,
       show_nsfw: false,
-      theme: "darkly".into(),
+      theme: "browser".into(),
       default_sort_type: SortType::Hot as i16,
       default_listing_type: ListingType::Subscribed as i16,
       lang: "browser".into(),

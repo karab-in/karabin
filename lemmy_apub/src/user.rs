@@ -1,10 +1,9 @@
 use crate::{
-  activities::generate_activity_id,
-  activity_queue::send_activity,
+  activity_queue::send_activity_single_dest,
   check_actor_domain,
   create_apub_response,
   fetcher::get_or_fetch_and_upsert_actor,
-  insert_activity,
+  generate_activity_id,
   ActorType,
   FromApub,
   PersonExt,
@@ -78,15 +77,10 @@ impl ToApub for User_ {
     }
 
     let mut ap_actor = ApActor::new(self.get_inbox_url()?, person);
-    ap_actor
-      .set_outbox(self.get_outbox_url()?)
-      .set_followers(self.get_followers_url()?)
-      .set_following(self.get_following_url().parse()?)
-      .set_liked(self.get_liked_url().parse()?)
-      .set_endpoints(Endpoints {
-        shared_inbox: Some(self.get_shared_inbox_url()?),
-        ..Default::default()
-      });
+    ap_actor.set_endpoints(Endpoints {
+      shared_inbox: Some(self.get_shared_inbox_url()?),
+      ..Default::default()
+    });
 
     if let Some(i) = &self.preferred_username {
       ap_actor.set_preferred_username(i.to_owned());
@@ -126,9 +120,7 @@ impl ActorType for User_ {
     let follow_actor = get_or_fetch_and_upsert_actor(follow_actor_id, context).await?;
     let to = follow_actor.get_inbox_url()?;
 
-    insert_activity(self.id, follow.clone(), true, context.pool()).await?;
-
-    send_activity(context.activity_queue(), follow, self, vec![to])?;
+    send_activity_single_dest(follow, self, to, context).await?;
     Ok(())
   }
 
@@ -151,9 +143,7 @@ impl ActorType for User_ {
       .set_context(activitystreams::context())
       .set_id(generate_activity_id(UndoType::Undo)?);
 
-    insert_activity(self.id, undo.clone(), true, context.pool()).await?;
-
-    send_activity(context.activity_queue(), undo, self, vec![to])?;
+    send_activity_single_dest(undo, self, to, context).await?;
     Ok(())
   }
 
