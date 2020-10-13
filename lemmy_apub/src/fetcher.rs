@@ -44,10 +44,7 @@ static ACTOR_REFETCH_INTERVAL_SECONDS_DEBUG: i64 = 10;
 
 /// Fetch any type of ActivityPub object, handling things like HTTP headers, deserialisation,
 /// timeouts etc.
-pub async fn fetch_remote_object<Response>(
-  client: &Client,
-  url: &Url,
-) -> Result<Response, LemmyError>
+async fn fetch_remote_object<Response>(client: &Client, url: &Url) -> Result<Response, LemmyError>
 where
   Response: for<'de> Deserialize<'de>,
 {
@@ -194,7 +191,7 @@ pub async fn search_by_apub_id(
   Ok(response)
 }
 
-pub async fn get_or_fetch_and_upsert_actor(
+pub(crate) async fn get_or_fetch_and_upsert_actor(
   apub_id: &Url,
   context: &LemmyContext,
 ) -> Result<Box<dyn ActorType>, LemmyError> {
@@ -207,7 +204,7 @@ pub async fn get_or_fetch_and_upsert_actor(
 }
 
 /// Check if a remote user exists, create if not found, if its too old update it.Fetch a user, insert/update it in the database and return the user.
-pub async fn get_or_fetch_and_upsert_user(
+pub(crate) async fn get_or_fetch_and_upsert_user(
   apub_id: &Url,
   context: &LemmyContext,
 ) -> Result<User_, LemmyError> {
@@ -259,7 +256,7 @@ fn should_refetch_actor(last_refreshed: NaiveDateTime) -> bool {
 }
 
 /// Check if a remote community exists, create if not found, if its too old update it.Fetch a community, insert/update it in the database and return the community.
-pub async fn get_or_fetch_and_upsert_community(
+pub(crate) async fn get_or_fetch_and_upsert_community(
   apub_id: &Url,
   context: &LemmyContext,
 ) -> Result<Community, LemmyError> {
@@ -338,7 +335,13 @@ async fn fetch_remote_community(
   }
   for o in outbox_items {
     let page = PageExt::from_any_base(o)?.context(location_info!())?;
-    let post = PostForm::from_apub(&page, context, None).await?;
+
+    // The post creator may be from a blocked instance,
+    // if it errors, then continue
+    let post = match PostForm::from_apub(&page, context, None).await {
+      Ok(post) => post,
+      Err(_) => continue,
+    };
     let post_ap_id = post.ap_id.as_ref().context(location_info!())?.clone();
     // Check whether the post already exists in the local db
     let existing = blocking(context.pool(), move |conn| {
@@ -355,7 +358,7 @@ async fn fetch_remote_community(
   Ok(community)
 }
 
-pub async fn get_or_fetch_and_insert_post(
+pub(crate) async fn get_or_fetch_and_insert_post(
   post_ap_id: &Url,
   context: &LemmyContext,
 ) -> Result<Post, LemmyError> {
@@ -380,7 +383,7 @@ pub async fn get_or_fetch_and_insert_post(
   }
 }
 
-pub async fn get_or_fetch_and_insert_comment(
+pub(crate) async fn get_or_fetch_and_insert_comment(
   comment_ap_id: &Url,
   context: &LemmyContext,
 ) -> Result<Comment, LemmyError> {

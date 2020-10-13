@@ -1,14 +1,14 @@
 use crate::{
-  fetcher::{get_or_fetch_and_insert_comment, get_or_fetch_and_insert_post},
-  inbox::shared_inbox::{
+  activities::receive::{
     announce_if_community_is_local,
-    get_user_from_activity,
+    get_actor_as_user,
     receive_unhandled_activity,
   },
+  fetcher::{get_or_fetch_and_insert_comment, get_or_fetch_and_insert_post},
   FromApub,
   PageExt,
 };
-use activitystreams::{activity::Dislike, base::AnyBase, object::Note, prelude::*};
+use activitystreams::{activity::Like, base::AnyBase, object::Note, prelude::*};
 use actix_web::HttpResponse;
 use anyhow::Context;
 use lemmy_db::{
@@ -26,31 +26,22 @@ use lemmy_websocket::{
   UserOperation,
 };
 
-pub async fn receive_dislike(
+pub async fn receive_like(
   activity: AnyBase,
   context: &LemmyContext,
 ) -> Result<HttpResponse, LemmyError> {
-  let dislike = Dislike::from_any_base(activity)?.context(location_info!())?;
-  match dislike.object().as_single_kind_str() {
-    Some("Page") => receive_dislike_post(dislike, context).await,
-    Some("Note") => receive_dislike_comment(dislike, context).await,
-    _ => receive_unhandled_activity(dislike),
+  let like = Like::from_any_base(activity)?.context(location_info!())?;
+  match like.object().as_single_kind_str() {
+    Some("Page") => receive_like_post(like, context).await,
+    Some("Note") => receive_like_comment(like, context).await,
+    _ => receive_unhandled_activity(like),
   }
 }
 
-async fn receive_dislike_post(
-  dislike: Dislike,
-  context: &LemmyContext,
-) -> Result<HttpResponse, LemmyError> {
-  let user = get_user_from_activity(&dislike, context).await?;
-  let page = PageExt::from_any_base(
-    dislike
-      .object()
-      .to_owned()
-      .one()
-      .context(location_info!())?,
-  )?
-  .context(location_info!())?;
+async fn receive_like_post(like: Like, context: &LemmyContext) -> Result<HttpResponse, LemmyError> {
+  let user = get_actor_as_user(&like, context).await?;
+  let page = PageExt::from_any_base(like.object().to_owned().one().context(location_info!())?)?
+    .context(location_info!())?;
 
   let post = PostForm::from_apub(&page, context, None).await?;
 
@@ -61,7 +52,7 @@ async fn receive_dislike_post(
   let like_form = PostLikeForm {
     post_id,
     user_id: user.id,
-    score: -1,
+    score: 1,
   };
   let user_id = user.id;
   blocking(context.pool(), move |conn| {
@@ -84,23 +75,17 @@ async fn receive_dislike_post(
     websocket_id: None,
   });
 
-  announce_if_community_is_local(dislike, &user, context).await?;
+  announce_if_community_is_local(like, &user, context).await?;
   Ok(HttpResponse::Ok().finish())
 }
 
-async fn receive_dislike_comment(
-  dislike: Dislike,
+async fn receive_like_comment(
+  like: Like,
   context: &LemmyContext,
 ) -> Result<HttpResponse, LemmyError> {
-  let note = Note::from_any_base(
-    dislike
-      .object()
-      .to_owned()
-      .one()
-      .context(location_info!())?,
-  )?
-  .context(location_info!())?;
-  let user = get_user_from_activity(&dislike, context).await?;
+  let note = Note::from_any_base(like.object().to_owned().one().context(location_info!())?)?
+    .context(location_info!())?;
+  let user = get_actor_as_user(&like, context).await?;
 
   let comment = CommentForm::from_apub(&note, context, None).await?;
 
@@ -112,7 +97,7 @@ async fn receive_dislike_comment(
     comment_id,
     post_id: comment.post_id,
     user_id: user.id,
-    score: -1,
+    score: 1,
   };
   let user_id = user.id;
   blocking(context.pool(), move |conn| {
@@ -141,6 +126,6 @@ async fn receive_dislike_comment(
     websocket_id: None,
   });
 
-  announce_if_community_is_local(dislike, &user, context).await?;
+  announce_if_community_is_local(like, &user, context).await?;
   Ok(HttpResponse::Ok().finish())
 }
