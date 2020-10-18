@@ -1,8 +1,7 @@
 use crate::{
-  check_actor_domain,
   extensions::page_extension::PageExtension,
   fetcher::{get_or_fetch_and_upsert_community, get_or_fetch_and_upsert_user},
-  objects::create_tombstone,
+  objects::{check_object_domain, create_tombstone},
   FromApub,
   PageExt,
   ToApub,
@@ -65,12 +64,12 @@ impl ToApub for Post {
     // https://github.com/LemmyNet/lemmy/issues/602
     let url = self.url.as_ref().filter(|u| !u.is_empty());
     if let Some(u) = url {
-      page.set_url(u.to_owned());
+      page.set_url(Url::parse(u)?);
     }
 
     if let Some(thumbnail_url) = &self.thumbnail_url {
       let mut image = Image::new();
-      image.set_url(thumbnail_url.to_string());
+      image.set_url(Url::parse(thumbnail_url)?);
       page.set_image(image.into_any_base()?);
     }
 
@@ -193,7 +192,7 @@ impl FromApub for PostForm {
       embed_description: iframely_description,
       embed_html: iframely_html,
       thumbnail_url: pictrs_thumbnail,
-      ap_id: Some(check_actor_domain(page, expected_domain)?),
+      ap_id: Some(check_object_domain(page, expected_domain)?),
       local: false,
     })
   }

@@ -1,4 +1,4 @@
-use crate::{check_actor_domain, ActorType, FromApub, PersonExt, ToApub};
+use crate::{objects::check_object_domain, ActorType, FromApub, PersonExt, ToApub};
 use activitystreams::{
   actor::{ApActor, Endpoints, Person},
   object::{Image, Tombstone},
@@ -39,13 +39,13 @@ impl ToApub for User_ {
 
     if let Some(avatar_url) = &self.avatar {
       let mut image = Image::new();
-      image.set_url(avatar_url.to_owned());
+      image.set_url(Url::parse(avatar_url)?);
       person.set_icon(image.into_any_base()?);
     }
 
     if let Some(banner_url) = &self.banner {
       let mut image = Image::new();
-      image.set_url(banner_url.to_owned());
+      image.set_url(Url::parse(banner_url)?);
       person.set_image(image.into_any_base()?);
     }
 
@@ -145,7 +145,7 @@ impl FromApub for UserForm {
       show_avatars: false,
       send_notifications_to_email: false,
       matrix_user_id: None,
-      actor_id: Some(check_actor_domain(person, expected_domain)?),
+      actor_id: Some(check_object_domain(person, expected_domain)?),
       bio: Some(bio),
       local: false,
       private_key: None,

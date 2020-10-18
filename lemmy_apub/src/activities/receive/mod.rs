@@ -4,12 +4,15 @@ use crate::{
 };
 use activitystreams::{
   activity::{ActorAndObjectRef, ActorAndObjectRefExt},
-  base::{AsBase, Extends, ExtendsExt},
+  base::{AsBase, BaseExt, Extends, ExtendsExt},
+  error::DomainError,
   object::{AsObject, ObjectExt},
 };
 use actix_web::HttpResponse;
 use anyhow::Context;
-use lemmy_db::user::User_;
+use diesel::result::Error::NotFound;
+use lemmy_db::{comment::Comment, community::Community, post::Post, user::User_};
+use lemmy_structs::blocking;
 use lemmy_utils::{location_info, LemmyError};
 use lemmy_websocket::LemmyContext;
 use log::debug;
@@ -68,7 +71,7 @@ where
   Ok(())
 }
 
-pub(in crate) async fn get_actor_as_user<T, A>(
+pub(crate) async fn get_actor_as_user<T, A>(
   activity: &T,
   context: &LemmyContext,
 ) -> Result<User_, LemmyError>
@@ -78,4 +81,77 @@ where
   let actor = activity.actor()?;
   let user_uri = actor.as_single_xsd_any_uri().context(location_info!())?;
   get_or_fetch_and_upsert_user(&user_uri, context).await
+}
+
+pub(crate) enum FindResults {
+  Comment(Comment),
+  Community(Community),
+  Post(Post),
+}
+
+pub(crate) async fn find_by_id(
+  context: &LemmyContext,
+  apub_id: Url,
+) -> Result<FindResults, LemmyError> {
+  let ap_id = apub_id.to_string();
+  let community = blocking(context.pool(), move |conn| {
+    Community::read_from_actor_id(conn, &ap_id)
+  })
+  .await?;
+  if let Ok(c) = community {
+    return Ok(FindResults::Community(c));
+  }
+
+  let ap_id = apub_id.to_string();
+  let post = blocking(context.pool(), move |conn| {
+    Post::read_from_apub_id(conn, &ap_id)
+  })
+  .await?;
+  if let Ok(p) = post {
+    return Ok(FindResults::Post(p));
+  }
+
+  let ap_id = apub_id.to_string();
+  let comment = blocking(context.pool(), move |conn| {
+    Comment::read_from_apub_id(conn, &ap_id)
+  })
+  .await?;
+  if let Ok(c) = comment {
+    return Ok(FindResults::Comment(c));
+  }
+
+  return Err(NotFound.into());
+}
+
+pub(crate) fn verify_activity_domains_valid<T, Kind>(
+  activity: &T,
+  actor_id: Url,
+  object_domain_must_match: bool,
+) -> Result<(), LemmyError>
+where
+  T: AsBase<Kind> + ActorAndObjectRef,
+{
+  let expected_domain = actor_id.domain().context(location_info!())?;
+
+  activity.id(expected_domain)?;
+
+  let object_id = match activity.object().to_owned().single_xsd_any_uri() {
+    // object is just an ID
+    Some(id) => id,
+    // object is something like an activity, a comment or a post
+    None => activity
+      .object()
+      .to_owned()
+      .one()
+      .context(location_info!())?
+      .id()
+      .context(location_info!())?
+      .to_owned(),
+  };
+
+  if object_domain_must_match && object_id.domain() != Some(expected_domain) {
+    return Err(DomainError.into());
+  }
+
+  Ok(())
 }

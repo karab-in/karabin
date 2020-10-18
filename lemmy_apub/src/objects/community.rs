@@ -1,8 +1,7 @@
 use crate::{
-  check_actor_domain,
   extensions::group_extensions::GroupExtension,
   fetcher::get_or_fetch_and_upsert_user,
-  objects::create_tombstone,
+  objects::{check_object_domain, create_tombstone},
   ActorType,
   FromApub,
   GroupExt,
@@ -65,15 +64,15 @@ impl ToApub for Community {
       group.set_content(d);
     }
 
-    if let Some(icon) = &self.icon {
+    if let Some(icon_url) = &self.icon {
       let mut image = Image::new();
-      image.set_url(icon.to_owned());
+      image.set_url(Url::parse(icon_url)?);
       group.set_icon(image.into_any_base()?);
     }
 
     if let Some(banner_url) = &self.banner {
       let mut image = Image::new();
-      image.set_url(banner_url.to_owned());
+      image.set_url(Url::parse(banner_url)?);
       group.set_image(image.into_any_base()?);
     }
 
@@ -189,7 +188,7 @@ impl FromApub for CommunityForm {
       updated: group.inner.updated().map(|u| u.to_owned().naive_local()),
       deleted: None,
       nsfw: group.ext_one.sensitive,
-      actor_id: Some(check_actor_domain(group, expected_domain)?),
+      actor_id: Some(check_object_domain(group, expected_domain)?),
       local: false,
       private_key: None,
       public_key: Some(group.ext_two.to_owned().public_key.public_key_pem),
