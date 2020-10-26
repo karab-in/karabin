@@ -16,9 +16,10 @@ services:
       - postgres
       - iframely
   lemmy-ui:
-    image: dessalines/lemmy-ui:v0.8.0
+    image: dessalines/lemmy-ui:v0.8.1
     ports:
       - "1235:1234"
+    restart: always
     environment:
       - LEMMY_INTERNAL_HOST=lemmy:8536
       - LEMMY_EXTERNAL_HOST=localhost:8536
@@ -40,7 +41,7 @@ services:
     restart: always
 
   pictrs:
-    image: asonix/pictrs:v0.2.2-r0
+    image: asonix/pictrs:v0.2.4-r0
     ports: 
       - "8537:8080"
     user: 991:991

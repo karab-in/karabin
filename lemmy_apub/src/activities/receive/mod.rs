@@ -20,18 +20,14 @@ use serde::Serialize;
 use std::fmt::Debug;
 use url::Url;
 
-pub mod announce;
-pub mod create;
-pub mod delete;
-pub mod dislike;
-pub mod like;
-pub mod remove;
-pub mod undo;
-mod undo_comment;
-mod undo_post;
-pub mod update;
+pub(crate) mod comment;
+pub(crate) mod comment_undo;
+pub(crate) mod community;
+pub(crate) mod post;
+pub(crate) mod post_undo;
 
-fn receive_unhandled_activity<A>(activity: A) -> Result<HttpResponse, LemmyError>
+/// Return HTTP 501 for unsupported activities in inbox.
+pub(crate) fn receive_unhandled_activity<A>(activity: A) -> Result<HttpResponse, LemmyError>
 where
   A: Debug,
 {
@@ -39,6 +35,8 @@ where
   Ok(HttpResponse::NotImplemented().finish())
 }
 
+/// Reads the destination community from the activity's `cc` field. If this refers to a local
+/// community, the activity is announced to all community followers.
 async fn announce_if_community_is_local<T, Kind>(
   activity: T,
   user: &User_,
@@ -52,16 +50,12 @@ where
 {
   let cc = activity.cc().context(location_info!())?;
   let cc = cc.as_many().context(location_info!())?;
-  let community_followers_uri = cc
+  let community_uri = cc
     .first()
     .context(location_info!())?
     .as_xsd_any_uri()
     .context(location_info!())?;
-  // TODO: this is hacky but seems to be the only way to get the community ID
-  let community_uri = community_followers_uri
-    .to_string()
-    .replace("/followers", "");
-  let community = get_or_fetch_and_upsert_community(&Url::parse(&community_uri)?, context).await?;
+  let community = get_or_fetch_and_upsert_community(&community_uri, context).await?;
 
   if community.local {
     community
@@ -71,6 +65,7 @@ where
   Ok(())
 }
 
+/// Reads the actor field of an activity and returns the corresponding `User_`.
 pub(crate) async fn get_actor_as_user<T, A>(
   activity: &T,
   context: &LemmyContext,
@@ -89,6 +84,9 @@ pub(crate) enum FindResults {
   Post(Post),
 }
 
+/// Tries to find a community, post or comment in the local database, without any network requests.
+/// This is used to handle deletions and removals, because in case we dont have the object, we can
+/// simply ignore the activity.
 pub(crate) async fn find_by_id(
   context: &LemmyContext,
   apub_id: Url,
@@ -123,6 +121,11 @@ pub(crate) async fn find_by_id(
   return Err(NotFound.into());
 }
 
+/// Ensure that the ID of an incoming activity comes from the same domain as the actor. Optionally
+/// also checks the ID of the inner object.
+///
+/// The reason that this starts with the actor ID is that it was already confirmed as correct by the
+/// HTTP signature.
 pub(crate) fn verify_activity_domains_valid<T, Kind>(
   activity: &T,
   actor_id: Url,

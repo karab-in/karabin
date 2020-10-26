@@ -32,9 +32,8 @@ use url::Url;
 
 #[async_trait::async_trait(?Send)]
 impl ToApub for Community {
-  type Response = GroupExt;
+  type ApubType = GroupExt;
 
-  // Turn a Lemmy Community into an ActivityPub group that can be sent out over the network.
   async fn to_apub(&self, pool: &DbPool) -> Result<GroupExt, LemmyError> {
     // The attributed to, is an ordered vector with the creator actor_ids first,
     // then the rest of the moderators
@@ -51,7 +50,7 @@ impl ToApub for Community {
     group
       .set_context(activitystreams::context())
       .set_id(Url::parse(&self.actor_id)?)
-      .set_name(self.name.to_owned())
+      .set_name(self.title.to_owned())
       .set_published(convert_datetime(self.published))
       .set_many_attributed_tos(moderators);
 
@@ -78,7 +77,7 @@ impl ToApub for Community {
 
     let mut ap_actor = ApActor::new(self.get_inbox_url()?, group);
     ap_actor
-      .set_preferred_username(self.title.to_owned())
+      .set_preferred_username(self.name.to_owned())
       .set_outbox(self.get_outbox_url()?)
       .set_followers(self.get_followers_url()?)
       .set_endpoints(Endpoints {
@@ -108,7 +107,6 @@ impl ToApub for Community {
 impl FromApub for CommunityForm {
   type ApubType = GroupExt;
 
-  /// Parse an ActivityPub group received from another instance into a Lemmy community.
   async fn from_apub(
     group: &GroupExt,
     context: &LemmyContext,
@@ -127,16 +125,16 @@ impl FromApub for CommunityForm {
     let creator = get_or_fetch_and_upsert_user(creator_uri, context).await?;
     let name = group
       .inner
+      .preferred_username()
+      .context(location_info!())?
+      .to_string();
+    let title = group
+      .inner
       .name()
       .context(location_info!())?
       .as_one()
       .context(location_info!())?
       .as_xsd_string()
-      .context(location_info!())?
-      .to_string();
-    let title = group
-      .inner
-      .preferred_username()
       .context(location_info!())?
       .to_string();
     // TODO: should be parsed as html and tags like <script> removed (or use markdown source)
