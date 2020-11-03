@@ -58,7 +58,7 @@ pub(crate) async fn fetch_iframely(
   client: &Client,
   url: &str,
 ) -> Result<IframelyResponse, LemmyError> {
-  let fetch_url = format!("http://iframely/oembed?url={}", url);
+  let fetch_url = format!("{}/oembed?url={}", Settings::get().iframely_url, url);
 
   let response = retry(|| client.get(&fetch_url).send()).await?;
 
@@ -88,7 +88,8 @@ pub(crate) async fn fetch_pictrs(
   is_image_content_type(client, image_url).await?;
 
   let fetch_url = format!(
-    "http://pictrs:8080/image/download?url={}",
+    "{}/image/download?url={}",
+    Settings::get().pictrs_url,
     utf8_percent_encode(image_url, NON_ALPHANUMERIC) // TODO this might not be needed
   );
 

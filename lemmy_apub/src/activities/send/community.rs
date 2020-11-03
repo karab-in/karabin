@@ -72,7 +72,7 @@ impl ActorType for Community {
       .actor()?
       .as_single_xsd_any_uri()
       .context(location_info!())?;
-    let user = get_or_fetch_and_upsert_user(actor_uri, context).await?;
+    let user = get_or_fetch_and_upsert_user(actor_uri, context, &mut 0).await?;
 
     let mut accept = Accept::new(self.actor_id.to_owned(), follow.into_any_base()?);
     accept
@@ -95,7 +95,7 @@ impl ActorType for Community {
       .set_to(public())
       .set_many_ccs(vec![self.get_followers_url()?]);
 
-    send_to_community_followers(delete, self, context, None).await?;
+    send_to_community_followers(delete, self, context).await?;
     Ok(())
   }
 
@@ -121,7 +121,7 @@ impl ActorType for Community {
       .set_to(public())
       .set_many_ccs(vec![self.get_followers_url()?]);
 
-    send_to_community_followers(undo, self, context, None).await?;
+    send_to_community_followers(undo, self, context).await?;
     Ok(())
   }
 
@@ -134,7 +134,7 @@ impl ActorType for Community {
       .set_to(public())
       .set_many_ccs(vec![self.get_followers_url()?]);
 
-    send_to_community_followers(remove, self, context, None).await?;
+    send_to_community_followers(remove, self, context).await?;
     Ok(())
   }
 
@@ -155,7 +155,7 @@ impl ActorType for Community {
       .set_to(public())
       .set_many_ccs(vec![self.get_followers_url()?]);
 
-    send_to_community_followers(undo, self, context, None).await?;
+    send_to_community_followers(undo, self, context).await?;
     Ok(())
   }
 
@@ -164,7 +164,6 @@ impl ActorType for Community {
   async fn send_announce(
     &self,
     activity: AnyBase,
-    sender: &User_,
     context: &LemmyContext,
   ) -> Result<(), LemmyError> {
     let mut announce = Announce::new(self.actor_id.to_owned(), activity);
@@ -174,13 +173,7 @@ impl ActorType for Community {
       .set_to(public())
       .set_many_ccs(vec![self.get_followers_url()?]);
 
-    send_to_community_followers(
-      announce,
-      self,
-      context,
-      Some(sender.get_shared_inbox_url()?),
-    )
-    .await?;
+    send_to_community_followers(announce, self, context).await?;
 
     Ok(())
   }
