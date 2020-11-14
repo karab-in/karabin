@@ -276,6 +276,7 @@ pub struct CommunityFollower {
   pub community_id: i32,
   pub user_id: i32,
   pub published: chrono::NaiveDateTime,
+  pub pending: Option<bool>,
 }
 
 #[derive(Insertable, AsChangeset, Clone)]
@@ -283,6 +284,7 @@ pub struct CommunityFollower {
 pub struct CommunityFollowerForm {
   pub community_id: i32,
   pub user_id: i32,
+  pub pending: bool,
 }
 
 impl Followable<CommunityFollowerForm> for CommunityFollower {
@@ -295,6 +297,19 @@ impl Followable<CommunityFollowerForm> for CommunityFollower {
       .values(community_follower_form)
       .get_result::<Self>(conn)
   }
+  fn follow_accepted(conn: &PgConnection, community_id_: i32, user_id_: i32) -> Result<Self, Error>
+  where
+    Self: Sized,
+  {
+    use crate::schema::community_follower::dsl::*;
+    diesel::update(
+      community_follower
+        .filter(community_id.eq(community_id_))
+        .filter(user_id.eq(user_id_)),
+    )
+    .set(pending.eq(true))
+    .get_result::<Self>(conn)
+  }
   fn unfollow(
     conn: &PgConnection,
     community_follower_form: &CommunityFollowerForm,
@@ -306,6 +321,15 @@ impl Followable<CommunityFollowerForm> for CommunityFollower {
         .filter(user_id.eq(&community_follower_form.user_id)),
     )
     .execute(conn)
+  }
+  // TODO: this function name only makes sense if you call it with a remote community. for a local
+  //       community, it will also return true if only remote followers exist
+  fn has_local_followers(conn: &PgConnection, community_id_: i32) -> Result<bool, Error> {
+    use crate::schema::community_follower::dsl::*;
+    diesel::select(exists(
+      community_follower.filter(community_id.eq(community_id_)),
+    ))
+    .get_result(conn)
   }
 }
 
@@ -326,7 +350,7 @@ mod tests {
       avatar: None,
       banner: None,
       admin: false,
-      banned: false,
+      banned: Some(false),
       published: None,
       updated: None,
       show_nsfw: false,
@@ -392,6 +416,7 @@ mod tests {
     let community_follower_form = CommunityFollowerForm {
       community_id: inserted_community.id,
       user_id: inserted_user.id,
+      pending: false,
     };
 
     let inserted_community_follower =
@@ -401,6 +426,7 @@ mod tests {
       id: inserted_community_follower.id,
       community_id: inserted_community.id,
       user_id: inserted_user.id,
+      pending: Some(false),
       published: inserted_community_follower.published,
     };
 

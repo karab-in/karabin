@@ -12,7 +12,12 @@ use activitystreams::{
   base::{AnyBase, BaseExt, ExtendsExt},
   object::ObjectExt,
 };
-use lemmy_db::{community::Community, user::User_, DbPool};
+use lemmy_db::{
+  community::{Community, CommunityFollower, CommunityFollowerForm},
+  user::User_,
+  DbPool,
+  Followable,
+};
 use lemmy_structs::blocking;
 use lemmy_utils::LemmyError;
 use lemmy_websocket::LemmyContext;
@@ -32,10 +37,6 @@ impl ActorType for User_ {
     self.private_key.to_owned()
   }
 
-  fn user_id(&self) -> i32 {
-    self.id
-  }
-
   /// As a given local user, send out a follow request to a remote community.
   async fn send_follow(
     &self,
@@ -47,6 +48,16 @@ impl ActorType for User_ {
       Community::read_from_actor_id(conn, &follow_actor_id)
     })
     .await??;
+
+    let community_follower_form = CommunityFollowerForm {
+      community_id: community.id,
+      user_id: self.id,
+      pending: true,
+    };
+    blocking(&context.pool(), move |conn| {
+      CommunityFollower::follow(conn, &community_follower_form).ok()
+    })
+    .await?;
 
     let mut follow = Follow::new(self.actor_id.to_owned(), community.actor_id()?);
     follow
@@ -94,27 +105,19 @@ impl ActorType for User_ {
     unimplemented!()
   }
 
-  async fn send_delete(&self, _creator: &User_, _context: &LemmyContext) -> Result<(), LemmyError> {
+  async fn send_delete(&self, _context: &LemmyContext) -> Result<(), LemmyError> {
     unimplemented!()
   }
 
-  async fn send_undo_delete(
-    &self,
-    _creator: &User_,
-    _context: &LemmyContext,
-  ) -> Result<(), LemmyError> {
+  async fn send_undo_delete(&self, _context: &LemmyContext) -> Result<(), LemmyError> {
     unimplemented!()
   }
 
-  async fn send_remove(&self, _creator: &User_, _context: &LemmyContext) -> Result<(), LemmyError> {
+  async fn send_remove(&self, _context: &LemmyContext) -> Result<(), LemmyError> {
     unimplemented!()
   }
 
-  async fn send_undo_remove(
-    &self,
-    _creator: &User_,
-    _context: &LemmyContext,
-  ) -> Result<(), LemmyError> {
+  async fn send_undo_remove(&self, _context: &LemmyContext) -> Result<(), LemmyError> {
     unimplemented!()
   }
 
