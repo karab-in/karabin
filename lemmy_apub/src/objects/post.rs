@@ -1,17 +1,23 @@
 use crate::{
-  extensions::page_extension::PageExtension,
+  extensions::{context::lemmy_context, page_extension::PageExtension},
   fetcher::{get_or_fetch_and_upsert_community, get_or_fetch_and_upsert_user},
-  objects::{check_object_domain, create_tombstone},
+  objects::{
+    check_object_domain,
+    create_tombstone,
+    get_source_markdown_value,
+    set_content_and_source,
+  },
   FromApub,
   PageExt,
   ToApub,
 };
 use activitystreams::{
-  object::{kind::PageType, Image, Page, Tombstone},
+  object::{kind::PageType, ApObject, Image, Page, Tombstone},
   prelude::*,
 };
 use activitystreams_ext::Ext1;
 use anyhow::Context;
+use backtrace::Backtrace;
 use lemmy_db::{
   community::Community,
   post::{Post, PostForm},
@@ -27,6 +33,7 @@ use lemmy_utils::{
   LemmyError,
 };
 use lemmy_websocket::LemmyContext;
+use log::error;
 use url::Url;
 
 #[async_trait::async_trait(?Send)]
@@ -35,7 +42,7 @@ impl ToApub for Post {
 
   // Turn a Lemmy post into an ActivityPub page that can be sent out over the network.
   async fn to_apub(&self, pool: &DbPool) -> Result<PageExt, LemmyError> {
-    let mut page = Page::new();
+    let mut page = ApObject::new(Page::new());
 
     let creator_id = self.creator_id;
     let creator = blocking(pool, move |conn| User_::read(conn, creator_id)).await??;
@@ -47,7 +54,7 @@ impl ToApub for Post {
       // Not needed when the Post is embedded in a collection (like for community outbox)
       // TODO: need to set proper context defining sensitive/commentsEnabled fields
       // https://git.asonix.dog/Aardwolf/activitystreams/issues/5
-      .set_context(activitystreams::context())
+      .set_many_contexts(lemmy_context()?)
       .set_id(self.ap_id.parse::<Url>()?)
       // Use summary field to be consistent with mastodon content warning.
       // https://mastodon.xyz/@Louisa/103987265222901387.json
@@ -57,7 +64,7 @@ impl ToApub for Post {
       .set_attributed_to(creator.actor_id);
 
     if let Some(body) = &self.body {
-      page.set_content(body.to_owned());
+      set_content_and_source(&mut page, &body)?;
     }
 
     // TODO: hacky code because we get self.url == Some("")
@@ -125,6 +132,15 @@ impl FromApub for PostForm {
     let community =
       get_or_fetch_and_upsert_community(community_actor_id, context, request_counter).await?;
 
+    if community.local && creator.local {
+      let page_id = page.id_unchecked().context(location_info!())?;
+      let bt = Backtrace::new();
+      error!(
+        "Lemmy is parsing a local post as remote, page id: {}, stack trace: {:?}",
+        page_id, bt
+      );
+    }
+
     let thumbnail_url = match &page.inner.image() {
       Some(any_image) => Image::from_any_base(
         any_image
@@ -162,13 +178,8 @@ impl FromApub for PostForm {
       .as_single_xsd_string()
       .context(location_info!())?
       .to_string();
-    let body = page
-      .inner
-      .content()
-      .as_ref()
-      .map(|c| c.as_single_xsd_string())
-      .flatten()
-      .map(|s| s.to_string());
+    let body = get_source_markdown_value(page)?;
+
     check_slurs(&name)?;
     let body_slurs_removed = body.map(|b| remove_slurs(&b));
     Ok(PostForm {

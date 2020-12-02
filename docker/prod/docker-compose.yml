@@ -15,12 +15,13 @@ services:
 #    build:
 #      context: ../../
 #      dockerfile: docker/prod/Dockerfile
-    image: orgkarabin/karabin:v0.8.7-kbin
+    image: orgkarabin/karabin:v0.8.9-kbin
     ports:
       - "127.0.0.1:8536:8536"
     restart: always
     environment:
       - RUST_LOG=error
+      - RUST_BACKTRACE=full
     volumes:
       - ./lemmy.hjson:/config/config.hjson
     depends_on:
@@ -29,7 +30,7 @@ services:
       - iframely
 
   lemmy-ui:
-    image: orgkarabin/karabin-ui:v0.8.7-kbin
+    image: orgkarabin/karabin-ui:v0.8.9-kbin
     ports:
       - "1235:1234"
     restart: always

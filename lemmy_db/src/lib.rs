@@ -14,6 +14,7 @@ use std::{env, env::VarError};
 pub mod activity;
 pub mod category;
 pub mod comment;
+pub mod comment_report;
 pub mod comment_view;
 pub mod community;
 pub mod community_view;
@@ -21,6 +22,7 @@ pub mod moderator;
 pub mod moderator_views;
 pub mod password_reset_request;
 pub mod post;
+pub mod post_report;
 pub mod post_view;
 pub mod private_message;
 pub mod private_message_view;
@@ -110,6 +112,18 @@ pub trait Readable<T> {
     Self: Sized;
 }
 
+pub trait Reportable<T> {
+  fn report(conn: &PgConnection, form: &T) -> Result<Self, Error>
+  where
+    Self: Sized;
+  fn resolve(conn: &PgConnection, report_id: i32, resolver_id: i32) -> Result<usize, Error>
+  where
+    Self: Sized;
+  fn unresolve(conn: &PgConnection, report_id: i32, resolver_id: i32) -> Result<usize, Error>
+  where
+    Self: Sized;
+}
+
 pub trait MaybeOptional<T> {
   fn get_optional(self) -> Option<T>;
 }
@@ -142,7 +156,7 @@ pub enum SortType {
   TopAll,
 }
 
-#[derive(EnumString, ToString, Debug, Serialize, Deserialize)]
+#[derive(EnumString, ToString, Debug, Serialize, Deserialize, Clone)]
 pub enum ListingType {
   All,
   Local,
