@@ -1,4 +1,4 @@
-# Depraced
+# Deprecated
 
 https://github.com/ernestwisniewski/kbin
 
